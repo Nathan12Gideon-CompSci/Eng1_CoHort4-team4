@@ -54,7 +54,8 @@ public class Main extends Game {
             redSquareSprite.translateX(-speed * delta);
         } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
             redSquareSprite.translateX(speed * delta);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             redSquareSprite.translateY(speed * delta);
         } else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
             redSquareSprite.translateY(-speed * delta);
