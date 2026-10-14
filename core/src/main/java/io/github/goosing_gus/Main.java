@@ -50,10 +50,14 @@ public class Main extends Game {
         float speed = 4f;
         float delta = Gdx.graphics.getDeltaTime();
 
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            redSquareSprite.translateX(speed * delta);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             redSquareSprite.translateX(-speed * delta);
+        } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            redSquareSprite.translateX(speed * delta);
+        } else if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+            redSquareSprite.translateY(speed * delta);
+        } else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+            redSquareSprite.translateY(-speed * delta);
         }
     }
 
