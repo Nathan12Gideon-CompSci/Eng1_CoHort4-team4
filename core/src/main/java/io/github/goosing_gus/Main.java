@@ -4,8 +4,11 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.graphics.Color;
@@ -15,6 +18,9 @@ public class Main extends Game {
 
     SpriteBatch spriteBatch;
     FitViewport viewport;
+    private BitmapFont font;
+    private Batch batch;
+
 
     Texture redSquareTexture;
 
@@ -22,15 +28,26 @@ public class Main extends Game {
 
     @Override
     public void create() {
-        setScreen(new FirstScreen());
-
+        batch = new SpriteBatch();
         spriteBatch = new SpriteBatch();
         viewport = new FitViewport(8, 5);
+
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("PixelifySans-VariableFont_wght.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter fontParams = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        fontParams.size = 24;
+        fontParams.color = Color.WHITE;
+        font = generator.generateFont(fontParams);
+        generator.dispose();
+
 
         redSquareTexture = new Texture("redSquare.png");
 
         redSquareSprite = new Sprite(redSquareTexture); // Initialize the sprite based on the texture
         redSquareSprite.setSize(1, 1);
+
+        setScreen(new ControlsScreen(this));
+
+
     }
 
     @Override
@@ -38,43 +55,66 @@ public class Main extends Game {
         viewport.update(width, height, true); // true centers the camera
     }
 
+//    @Override
+//    public void render() {
+//        // organize code into three methods
+//        input();
+//        logic();
+//        draw();
+//    }
+//
+//    private void input() {
+//        float speed = 4f;
+//        float delta = Gdx.graphics.getDeltaTime();
+//
+//        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+//            redSquareSprite.translateX(-speed * delta);
+//        } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+//            redSquareSprite.translateX(speed * delta);
+//        }
+//        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+//            redSquareSprite.translateY(speed * delta);
+//        } else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+//            redSquareSprite.translateY(-speed * delta);
+//        }
+//    }
+//
+//    private void logic() {
+//
+//    }
+//
+//    private void draw() {
+//        ScreenUtils.clear(Color.BLACK);
+//        viewport.apply();
+//        spriteBatch.setProjectionMatrix(viewport.getCamera().combined);
+//        spriteBatch.begin();
+//
+//        redSquareSprite.draw(spriteBatch);
+//
+//        spriteBatch.end();
+//
+//    }
+
     @Override
-    public void render() {
-        // organize code into three methods
-        input();
-        logic();
-        draw();
+    public void dispose() {
+        spriteBatch.dispose();
+        batch.dispose();
+        super.dispose();
+        font.dispose();
     }
 
-    private void input() {
-        float speed = 4f;
-        float delta = Gdx.graphics.getDeltaTime();
-
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            redSquareSprite.translateX(-speed * delta);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            redSquareSprite.translateX(speed * delta);
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            redSquareSprite.translateY(speed * delta);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            redSquareSprite.translateY(-speed * delta);
-        }
+    public SpriteBatch getSpriteBatch() {
+        return spriteBatch;
     }
 
-    private void logic() {
-
+    public Batch getBatch() {
+        return batch;
     }
 
-    private void draw() {
-        ScreenUtils.clear(Color.BLACK);
-        viewport.apply();
-        spriteBatch.setProjectionMatrix(viewport.getCamera().combined);
-        spriteBatch.begin();
-
-        redSquareSprite.draw(spriteBatch);
-
-        spriteBatch.end();
+    public BitmapFont getFont() {
+        return font;
     }
+
+
 }
 
