@@ -17,12 +17,20 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 public class GameScreen extends ScreenAdapter {
     private static final float WORLD_WIDTH = 16f;
     private static final float WORLD_HEIGHT = 9f;
+    private static final float ROUND_SECONDS = 300f;   // 5 minutes of play time
 
     private final Batch batch;
     private final Texture bgdTexture = new Texture(Gdx.files.internal("bgd2.jpg"));
     private final Texture playerTexture = new Texture(Gdx.files.internal("player.png"));
     private final Viewport gameViewport =  new ExtendViewport(16f, 9f);
     private final Vector2 inputMovement = new Vector2();
+
+    // --- timer and pause (new) ---
+    private final GameTimer timer = new GameTimer(ROUND_SECONDS);
+    private final BitmapFont font = new BitmapFont();
+    private final GlyphLayout layout = new GlyphLayout();
+    private final Viewport uiViewport = new ScreenViewport();   // pixel-based, for text
+    private boolean paused = true;                              // every round starts paused
 
     private final Player player = new Player(
         WORLD_WIDTH / 2, WORLD_HEIGHT / 2,
@@ -35,11 +43,13 @@ public class GameScreen extends ScreenAdapter {
         this.batch = game.getBatch();
 
         bgdTexture.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
+        font.getData().setScale(2f);
     }
 
     @Override
     public void resize(int width, int height) {
         gameViewport.update(width, height, true);
+        uiViewport.update(width, height, true);
     }
 
     @Override
@@ -49,6 +59,25 @@ public class GameScreen extends ScreenAdapter {
 
     private void resetGame() {
         player.reset(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+        timer.reset();
+        paused = true;
+    }
+
+    // true only while the round is running (not paused, not finished)
+    private boolean isPlaying() {
+        return !paused && !timer.isFinished();
+    }
+
+    private void handlePauseKey() {
+        if (timer.isFinished()) return;          // after the round ended, ESC does nothing
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            paused = !paused;
+            if (paused) {
+                timer.pause();
+            } else {
+                timer.start();
+            }
+        }
     }
 
     private void processInput() {
@@ -72,25 +101,55 @@ public class GameScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-        processInput();
+        handlePauseKey();
+        if (isPlaying()) {
+            processInput();
+        }
         updateLogic(delta);
 
         ScreenUtils.clear(Color.GRAY);
 
+        // game world
         gameViewport.apply();
         batch.setProjectionMatrix(gameViewport.getCamera().combined);
         batch.begin();
-
         drawBackground();
         player.draw(batch);
-
         batch.end();
 
+        // text on top (timer, pause, time up)
+        drawUi();
     }
 
     private void updateLogic(float deltaTime) {
         Gdx.graphics.getDeltaTime();
-        player.update(deltaTime);
+        timer.update(deltaTime);          // only counts down while running
+        if (isPlaying()) {
+            player.update(deltaTime);     // player and geese freeze when paused
+        }
+    }
+
+    private void drawUi() {
+        uiViewport.apply();
+        batch.setProjectionMatrix(uiViewport.getCamera().combined);
+        batch.begin();
+
+        float w = uiViewport.getWorldWidth();
+        float h = uiViewport.getWorldHeight();
+
+        font.draw(batch, timer.getDisplay(), 20, h - 20);
+
+        if (timer.isFinished()) {
+            drawCentered("TIME'S UP!", w, h);
+        } else if (paused) {
+            drawCentered("PAUSED - press ESC to play", w, h);
+        }
+        batch.end();
+    }
+
+    private void drawCentered(String text, float w, float h) {
+        layout.setText(font, text);
+        font.draw(batch, text, (w - layout.width) / 2, (h + layout.height) / 2);
     }
 
     private void drawBackground() {
@@ -107,5 +166,6 @@ public class GameScreen extends ScreenAdapter {
     public void dispose() {
         bgdTexture.dispose();
         playerTexture.dispose();
+        font.dispose();
     }
 }
