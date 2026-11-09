@@ -13,6 +13,7 @@ public class Player extends GameObject {
 
     private final Viewport gameViewport;
     private float patience = PATIENCE;
+    private float speedMultiplier = 1f;
     private final Vector2 moveDirection = new Vector2();
 
     public Player(float x, float y, Viewport gameViewport, Texture texture) {
@@ -23,7 +24,13 @@ public class Player extends GameObject {
     public void reset(float x, float y) {
         rect.setPosition(x, y);
         patience = PATIENCE;
+        speedMultiplier = 1f;
     }
+
+    public void setSpeedMultiplier(float multiplier) {
+        this.speedMultiplier = multiplier;
+    }
+
     @Override
     void update(float deltaTime) {
         move(deltaTime);
@@ -32,8 +39,8 @@ public class Player extends GameObject {
     private void move(float deltaTime) {
         if(moveDirection.isZero()) return;
 
-        float newX = rect.getX() + moveDirection.x * SPEED * deltaTime;
-        float newY = rect.getY() + moveDirection.y * SPEED * deltaTime;
+        float newX = rect.getX() + moveDirection.x * SPEED * speedMultiplier * deltaTime;
+        float newY = rect.getY() + moveDirection.y * SPEED * speedMultiplier * deltaTime;
 
         newX = MathUtils.clamp(newX, 0, gameViewport.getWorldWidth() - rect.getWidth());
         newY = MathUtils.clamp(newY, 0, gameViewport.getWorldHeight() - rect.getHeight());

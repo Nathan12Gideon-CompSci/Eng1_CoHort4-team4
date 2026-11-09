@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -22,15 +23,21 @@ public class GameScreen extends ScreenAdapter {
     private final Batch batch;
     private final Texture bgdTexture = new Texture(Gdx.files.internal("bgd2.jpg"));
     private final Texture playerTexture = new Texture(Gdx.files.internal("player.png"));
+    private final Texture pixelTexture = createPixelTexture();   // 1x1 white, tinted when drawn
     private final Viewport gameViewport =  new ExtendViewport(16f, 9f);
     private final Vector2 inputMovement = new Vector2();
 
-    // --- timer and pause (new) ---
+    // --- timer and pause ---
     private final GameTimer timer = new GameTimer(ROUND_SECONDS);
     private final BitmapFont font = new BitmapFont();
     private final GlyphLayout layout = new GlyphLayout();
     private final Viewport uiViewport = new ScreenViewport();   // pixel-based, for text
     private boolean paused = true;                              // every round starts paused
+
+    // --- hidden events ---
+    private final PitEvent pit = new PitEvent(3f, 2f, 1.5f, 1.5f, pixelTexture);
+    private final LakeEvent lake = new LakeEvent(9f, 5f, 4f, 2.5f, pixelTexture);
+    private int eventsTriggered = 0;
 
     private final Player player = new Player(
         WORLD_WIDTH / 2, WORLD_HEIGHT / 2,
@@ -44,6 +51,15 @@ public class GameScreen extends ScreenAdapter {
 
         bgdTexture.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat);
         font.getData().setScale(2f);
+    }
+
+    private static Texture createPixelTexture() {
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return texture;
     }
 
     @Override
@@ -60,6 +76,9 @@ public class GameScreen extends ScreenAdapter {
     private void resetGame() {
         player.reset(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
         timer.reset();
+        pit.reset();
+        lake.reset();
+        eventsTriggered = 0;
         paused = true;
     }
 
@@ -82,17 +101,19 @@ public class GameScreen extends ScreenAdapter {
 
     private void processInput() {
         inputMovement.setZero();
-        if(Gdx.input.isKeyPressed(Input.Keys.W)) {
-            inputMovement.y += 1;
-        }
-        if(Gdx.input.isKeyPressed(Input.Keys.S)) {
-            inputMovement.y -= 1;
-        }
-        if(Gdx.input.isKeyPressed(Input.Keys.A)) {
-            inputMovement.x -= 1;
-        }
-        if(Gdx.input.isKeyPressed(Input.Keys.D)) {
-            inputMovement.x += 1;
+        if (!pit.isTrapped()) {                  // cannot move while stuck in the pit
+            if(Gdx.input.isKeyPressed(Input.Keys.W)) {
+                inputMovement.y += 1;
+            }
+            if(Gdx.input.isKeyPressed(Input.Keys.S)) {
+                inputMovement.y -= 1;
+            }
+            if(Gdx.input.isKeyPressed(Input.Keys.A)) {
+                inputMovement.x -= 1;
+            }
+            if(Gdx.input.isKeyPressed(Input.Keys.D)) {
+                inputMovement.x += 1;
+            }
         }
         //normalise movement
         inputMovement.nor();
@@ -114,6 +135,8 @@ public class GameScreen extends ScreenAdapter {
         batch.setProjectionMatrix(gameViewport.getCamera().combined);
         batch.begin();
         drawBackground();
+        lake.draw(batch);
+        pit.draw(batch);
         player.draw(batch);
         batch.end();
 
@@ -122,11 +145,24 @@ public class GameScreen extends ScreenAdapter {
     }
 
     private void updateLogic(float deltaTime) {
-        Gdx.graphics.getDeltaTime();
         timer.update(deltaTime);          // only counts down while running
         if (isPlaying()) {
             player.update(deltaTime);     // player and geese freeze when paused
+            updateEvents();
         }
+    }
+
+    private void updateEvents() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            pit.pressJump();
+        }
+        if (pit.checkTrigger(player)) {
+            eventsTriggered++;
+        }
+        if (lake.checkTrigger(player)) {
+            eventsTriggered++;
+        }
+        lake.applyTo(player);
     }
 
     private void drawUi() {
@@ -138,11 +174,14 @@ public class GameScreen extends ScreenAdapter {
         float h = uiViewport.getWorldHeight();
 
         font.draw(batch, timer.getDisplay(), 20, h - 20);
+        font.draw(batch, "Events: " + eventsTriggered, 20, h - 60);
 
         if (timer.isFinished()) {
             drawCentered("TIME'S UP!", w, h);
         } else if (paused) {
             drawCentered("PAUSED - press ESC to play", w, h);
+        } else if (pit.isTrapped()) {
+            drawCentered("You fell into a pit! Press SPACE to jump out (" + pit.getJumpsLeft() + " left)", w, h);
         }
         batch.end();
     }
@@ -166,6 +205,7 @@ public class GameScreen extends ScreenAdapter {
     public void dispose() {
         bgdTexture.dispose();
         playerTexture.dispose();
+        pixelTexture.dispose();
         font.dispose();
     }
 }
