@@ -33,6 +33,17 @@ public class GameScreen extends ScreenAdapter {
     private static final Color OUTLINE_COLOR = new Color(0.10f, 0.07f, 0.04f, 1f);
     private static final Color BORDER_COLOR = new Color(0.78f, 0.68f, 0.48f, 1f);
     private static final Color FILL_COLOR = new Color(0.13f, 0.12f, 0.14f, 1f);
+    private static final Color SELECTED_FILL_COLOR = new Color(0.42f, 0.30f, 0.14f, 1f);
+
+    // Pause menu style
+    private static final float MENU_TEXT_SCALE = 2f;
+    private static final float MENU_TITLE_SCALE = 3.5f;
+    private static final float MENU_BUTTON_W = 380f;
+    private static final float MENU_BUTTON_H = 64f;
+    private static final float MENU_GAP = 18f;
+    private static final int ACTION_CONTINUE = 0;
+    private static final int ACTION_RESTART = 1;
+    private static final int ACTION_QUIT = 2;
 
     // 14 x 15 pixel-art stopwatch: o = outline, g = gold, w = face, h = hand, . = empty
     private static final String[] WATCH_ART = {
@@ -67,10 +78,12 @@ public class GameScreen extends ScreenAdapter {
     private final GlyphLayout layout = new GlyphLayout();
     private final Viewport uiViewport = new ScreenViewport();   // pixel-based, for text
     private boolean paused = true;                              // every round starts paused
+    private boolean started = false;                            // false until the player starts the first round
 
-    // --- quit button ---
-    private final Rectangle quitButton = new Rectangle();
+    // --- pause menu ---
+    private final Rectangle[] menuRects = {new Rectangle(), new Rectangle(), new Rectangle()};
     private final Vector2 mouse = new Vector2();
+    private int menuIndex = 0;
 
     // --- hidden events ---
     private final PitEvent pit = new PitEvent(3f, 2f, 1.5f, 1.5f, pixelTexture);
@@ -143,6 +156,7 @@ public class GameScreen extends ScreenAdapter {
         lake.reset();
         eventsTriggered = 0;
         paused = true;
+        menuIndex = 0;
     }
 
     // true only while the round is running (not paused, not finished)
@@ -150,31 +164,128 @@ public class GameScreen extends ScreenAdapter {
         return !paused && !timer.isFinished();
     }
 
+    // the menu is shown before the first round, while paused, and after the round ended
+    private boolean isMenuVisible() {
+        return paused || timer.isFinished();
+    }
+
+    private void resumeGame() {
+        paused = false;
+        started = true;
+        timer.start();
+    }
+
+    private void pauseGame() {
+        paused = true;
+        menuIndex = 0;
+        timer.pause();
+    }
+
+    private void restartGame() {
+        resetGame();
+        resumeGame();
+    }
+
     private void handlePauseKey() {
         if (timer.isFinished()) return;          // after the round ended, ESC does nothing
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            paused = !paused;
             if (paused) {
-                timer.pause();
+                resumeGame();
             } else {
-                timer.start();
+                pauseGame();
             }
         }
     }
 
-    // Quit: click the Quit button any time, or press Q while paused / after the round ended
-    private void handleQuit() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.Q) && !isPlaying()) {
-            Gdx.app.exit();
+    // ---------- pause menu ----------
+
+    private int[] menuActions() {
+        if (timer.isFinished()) {
+            return new int[] {ACTION_RESTART, ACTION_QUIT};
         }
-        if (Gdx.input.justTouched()) {
-            mouse.set(Gdx.input.getX(), Gdx.input.getY());
-            uiViewport.unproject(mouse);
-            if (quitButton.contains(mouse)) {
-                Gdx.app.exit();
-            }
+        return new int[] {ACTION_CONTINUE, ACTION_RESTART, ACTION_QUIT};
+    }
+
+    private String menuLabel(int action) {
+        switch (action) {
+            case ACTION_CONTINUE: return started ? "Continue Game" : "Start Game";
+            case ACTION_RESTART:  return "Restart Game";
+            default:              return "Quit";
         }
     }
+
+    private String menuTitle() {
+        if (timer.isFinished()) return "TIME'S UP!";
+        if (!started) return "GOOSING GUS";
+        return "PAUSED";
+    }
+
+    // Positions the buttons in the centre of the screen
+    private void updateMenuRects(int count) {
+        float w = uiViewport.getWorldWidth();
+        float h = uiViewport.getWorldHeight();
+        float totalH = count * MENU_BUTTON_H + (count - 1) * MENU_GAP;
+        float top = h / 2f + totalH / 2f - 30f;
+        for (int i = 0; i < count; i++) {
+            menuRects[i].set((w - MENU_BUTTON_W) / 2f,
+                top - (i + 1) * MENU_BUTTON_H - i * MENU_GAP,
+                MENU_BUTTON_W, MENU_BUTTON_H);
+        }
+    }
+
+    private void handleMenuInput() {
+        int[] actions = menuActions();
+        int count = actions.length;
+        if (menuIndex >= count) menuIndex = count - 1;
+        updateMenuRects(count);
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.W)) {
+            menuIndex = (menuIndex + count - 1) % count;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S)) {
+            menuIndex = (menuIndex + 1) % count;
+        }
+
+        // mouse hover and click
+        mouse.set(Gdx.input.getX(), Gdx.input.getY());
+        uiViewport.unproject(mouse);
+        if (Gdx.input.getDeltaX() != 0 || Gdx.input.getDeltaY() != 0) {
+            for (int i = 0; i < count; i++) {
+                if (menuRects[i].contains(mouse)) menuIndex = i;
+            }
+        }
+
+        boolean clicked = false;
+        if (Gdx.input.justTouched()) {
+            for (int i = 0; i < count; i++) {
+                if (menuRects[i].contains(mouse)) {
+                    menuIndex = i;
+                    clicked = true;
+                }
+            }
+        }
+        boolean confirmed = Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
+            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+
+        if (clicked || confirmed) {
+            runMenuAction(actions[menuIndex]);
+        }
+    }
+
+    private void runMenuAction(int action) {
+        switch (action) {
+            case ACTION_CONTINUE:
+                resumeGame();
+                break;
+            case ACTION_RESTART:
+                restartGame();
+                break;
+            default:
+                Gdx.app.exit();
+        }
+    }
+
+    // ---------- game ----------
 
     private void processInput() {
         inputMovement.setZero();
@@ -200,7 +311,9 @@ public class GameScreen extends ScreenAdapter {
     @Override
     public void render(float delta) {
         handlePauseKey();
-        handleQuit();
+        if (isMenuVisible()) {
+            handleMenuInput();
+        }
         if (isPlaying()) {
             processInput();
         }
@@ -218,7 +331,7 @@ public class GameScreen extends ScreenAdapter {
         player.draw(batch);
         batch.end();
 
-        // HUD on top
+        // HUD and menu on top
         drawUi();
     }
 
@@ -251,6 +364,13 @@ public class GameScreen extends ScreenAdapter {
         float w = uiViewport.getWorldWidth();
         float h = uiViewport.getWorldHeight();
 
+        // grey screen behind the menu
+        if (isMenuVisible()) {
+            batch.setColor(0.35f, 0.35f, 0.35f, 0.78f);
+            batch.draw(pixelTexture, 0, 0, w, h);
+            batch.setColor(Color.WHITE);
+        }
+
         // top-left: large stopwatch timer
         font.getData().setScale(TIMER_SCALE);
         layout.setText(font, "00:00");
@@ -265,7 +385,7 @@ public class GameScreen extends ScreenAdapter {
         float timerBoxY = iconY + (iconH - timerBoxH) / 2f;
         float textX = MARGIN + iconW + PAD;
         float timerBoxW = (textX - timerBoxX) + timerTextW + OUTLINE + BORDER + timerPad;
-        drawBox(timerBoxX, timerBoxY, timerBoxW, timerBoxH);
+        drawBox(timerBoxX, timerBoxY, timerBoxW, timerBoxH, FILL_COLOR);
         font.setColor(Color.WHITE);
         font.draw(batch, timer.getDisplay(), textX, timerBoxY + timerBoxH - OUTLINE - BORDER - timerPad);
         font.getData().setScale(HUD_SCALE);
@@ -279,21 +399,47 @@ public class GameScreen extends ScreenAdapter {
         drawLabelBox("Hidden events left: " + eventsLeft, MARGIN, eventsY,
             boxWidth("Hidden events left: 9"), boxH);
 
-        // top-right: quit button
-        float quitW = boxWidth("Quit");
-        quitButton.set(w - MARGIN - quitW, h - MARGIN - boxH, quitW, boxH);
-        drawLabelBox("Quit", quitButton.x, quitButton.y, quitButton.width, quitButton.height);
-
-
-        // centre messages
-        if (timer.isFinished()) {
-            drawCentered("TIME'S UP!  Press Q to quit", w, h);
-        } else if (paused) {
-            drawCentered("PAUSED - ESC to play, Q to quit", w, h);
+        // centre: pit message while playing, menu otherwise
+        if (isMenuVisible()) {
+            drawMenu(w, h);
         } else if (pit.isTrapped()) {
             drawCentered("You fell into a pit! Press SPACE to jump out (" + pit.getJumpsLeft() + " left)", w, h);
         }
         batch.end();
+    }
+
+    private void drawMenu(float w, float h) {
+        int[] actions = menuActions();
+        int count = actions.length;
+        updateMenuRects(count);
+
+        // title above the first button
+        font.getData().setScale(MENU_TITLE_SCALE);
+        font.setColor(Color.WHITE);
+        layout.setText(font, menuTitle());
+        float titleY = menuRects[0].y + MENU_BUTTON_H + 40f + layout.height;
+        font.draw(batch, layout, (w - layout.width) / 2f, titleY);
+
+        // buttons
+        font.getData().setScale(MENU_TEXT_SCALE);
+        for (int i = 0; i < count; i++) {
+            Rectangle r = menuRects[i];
+            drawBox(r.x, r.y, r.width, r.height, i == menuIndex ? SELECTED_FILL_COLOR : FILL_COLOR);
+            String label = menuLabel(actions[i]);
+            layout.setText(font, label);
+            font.setColor(Color.WHITE);
+            font.draw(batch, label, r.x + (r.width - layout.width) / 2f,
+                r.y + (r.height + layout.height) / 2f);
+        }
+
+        // hint under the buttons
+        font.getData().setScale(HUD_SCALE);
+        String hint = timer.isFinished()
+            ? "W/S or arrows to choose, Enter to select"
+            : "W/S or arrows to choose, Enter to select, ESC to continue";
+        layout.setText(font, hint);
+        Rectangle last = menuRects[count - 1];
+        font.draw(batch, hint, (w - layout.width) / 2f, last.y - 24f);
     }
 
     private float textWidth(String text) {
@@ -310,20 +456,20 @@ public class GameScreen extends ScreenAdapter {
         return layout.height + 2 * (OUTLINE + BORDER + PAD);
     }
 
-    // Dark box with beige border and dark outline; (x, y) is the bottom-left corner
-    private void drawBox(float x, float y, float w, float h) {
+    // Box with beige border and dark outline; (x, y) is the bottom-left corner
+    private void drawBox(float x, float y, float w, float h, Color fill) {
         batch.setColor(OUTLINE_COLOR);
         batch.draw(pixelTexture, x, y, w, h);
         batch.setColor(BORDER_COLOR);
         batch.draw(pixelTexture, x + OUTLINE, y + OUTLINE, w - 2 * OUTLINE, h - 2 * OUTLINE);
-        batch.setColor(FILL_COLOR);
+        batch.setColor(fill);
         batch.draw(pixelTexture, x + OUTLINE + BORDER, y + OUTLINE + BORDER,
             w - 2 * (OUTLINE + BORDER), h - 2 * (OUTLINE + BORDER));
         batch.setColor(Color.WHITE);
     }
 
     private void drawLabelBox(String text, float x, float y, float w, float h) {
-        drawBox(x, y, w, h);
+        drawBox(x, y, w, h, FILL_COLOR);
         font.setColor(Color.WHITE);
         font.draw(batch, text, x + OUTLINE + BORDER + PAD, y + h - OUTLINE - BORDER - PAD);
     }
