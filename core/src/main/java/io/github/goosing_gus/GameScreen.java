@@ -16,6 +16,8 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import java.util.Random;
+
 public class GameScreen extends ScreenAdapter {
     private static final float WORLD_WIDTH = 16f;
     private static final float WORLD_HEIGHT = 9f;
@@ -86,7 +88,7 @@ public class GameScreen extends ScreenAdapter {
     private int menuIndex = 0;
 
     // --- hidden events ---
-    private final PitEvent pit = new PitEvent(3f, 2f, 1.5f, 1.5f, pixelTexture);
+    private final PitEvent pit = new PitEvent(3f, 2f, 2f, 2f, pixelTexture);
     private final LakeEvent lake = new LakeEvent(9f, 5f, 4f, 2.5f, pixelTexture);
     private int eventsTriggered = 0;
 
@@ -264,8 +266,8 @@ public class GameScreen extends ScreenAdapter {
                 }
             }
         }
-        boolean confirmed = Gdx.input.isKeyJustPressed(Input.Keys.ENTER)
-            || Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+        // SPACE is not used here, it is the pit climbing key
+        boolean confirmed = Gdx.input.isKeyJustPressed(Input.Keys.ENTER);
 
         if (clicked || confirmed) {
             runMenuAction(actions[menuIndex]);
@@ -331,7 +333,7 @@ public class GameScreen extends ScreenAdapter {
         player.draw(batch);
         batch.end();
 
-        // HUD and menu on top
+        // HUD, pit scene and menu on top
         drawUi();
     }
 
@@ -363,6 +365,11 @@ public class GameScreen extends ScreenAdapter {
 
         float w = uiViewport.getWorldWidth();
         float h = uiViewport.getWorldHeight();
+
+        // the pit is its own map: it covers the whole screen while the player is inside
+        if (pit.isTrapped()) {
+            drawPitScene(w, h);
+        }
 
         // grey screen behind the menu
         if (isMenuVisible()) {
@@ -399,13 +406,78 @@ public class GameScreen extends ScreenAdapter {
         drawLabelBox("Hidden events left: " + eventsLeft, MARGIN, eventsY,
             boxWidth("Hidden events left: 9"), boxH);
 
-        // centre: pit message while playing, menu otherwise
+        // menu
         if (isMenuVisible()) {
             drawMenu(w, h);
-        } else if (pit.isTrapped()) {
-            drawCentered("You fell into a pit! Press SPACE to jump out (" + pit.getJumpsLeft() + " left)", w, h);
         }
         batch.end();
+    }
+
+    // The dirt pit: a shaft with a 30-rung ladder, the player climbs one rung per SPACE press
+    private void drawPitScene(float w, float h) {
+        // soil
+        batch.setColor(0.22f, 0.13f, 0.07f, 1f);
+        batch.draw(pixelTexture, 0, 0, w, h);
+        Random rnd = new Random(7);
+        for (int i = 0; i < 160; i++) {
+            float size = 6f + rnd.nextFloat() * 14f;
+            float shade = 0.12f + rnd.nextFloat() * 0.16f;
+            batch.setColor(shade + 0.08f, shade, shade * 0.5f, 1f);
+            batch.draw(pixelTexture, rnd.nextFloat() * w, rnd.nextFloat() * h, size, size);
+        }
+
+        // shaft
+        float shaftW = w * 0.36f;
+        float shaftX = (w - shaftW) / 2f;
+        batch.setColor(0.40f, 0.25f, 0.12f, 1f);
+        batch.draw(pixelTexture, shaftX, 0, shaftW, h);
+        for (int i = 0; i < 70; i++) {
+            float size = 6f + rnd.nextFloat() * 12f;
+            float shade = 0.28f + rnd.nextFloat() * 0.14f;
+            batch.setColor(shade + 0.10f, shade, shade * 0.45f, 1f);
+            batch.draw(pixelTexture, shaftX + rnd.nextFloat() * (shaftW - size), rnd.nextFloat() * h, size, size);
+        }
+
+        // sky at the top of the shaft
+        batch.setColor(0.55f, 0.80f, 1f, 1f);
+        batch.draw(pixelTexture, shaftX + shaftW * 0.2f, h * 0.94f, shaftW * 0.6f, h * 0.06f);
+
+        // ladder
+        float cx = w / 2f;
+        float half = shaftW * 0.16f;
+        float railW = 10f;
+        float y0 = h * 0.16f;
+        float y1 = h * 0.88f;
+        int total = pit.getTotalJumps();
+        int jumps = pit.getJumps();
+        batch.setColor(0.35f, 0.20f, 0.08f, 1f);
+        batch.draw(pixelTexture, cx - half - railW / 2f, y0 - 10f, railW, y1 - y0 + 20f);
+        batch.draw(pixelTexture, cx + half - railW / 2f, y0 - 10f, railW, y1 - y0 + 20f);
+        for (int i = 1; i <= total; i++) {
+            float ry = y0 + (y1 - y0) * i / total;
+            if (i <= jumps) {
+                batch.setColor(0.88f, 0.68f, 0.36f, 1f);   // rungs already climbed
+            } else {
+                batch.setColor(0.55f, 0.35f, 0.15f, 1f);
+            }
+            batch.draw(pixelTexture, cx - half, ry - 3f, 2f * half, 6f);
+        }
+
+        // player on the ladder
+        float ph = h * 0.15f;
+        float pw = ph * playerTexture.getWidth() / playerTexture.getHeight();
+        float py = y0 + (y1 - y0) * jumps / total;
+        batch.setColor(Color.WHITE);
+        batch.draw(playerTexture, cx - pw / 2f, py, pw, ph);
+
+        // text
+        font.getData().setScale(MENU_TEXT_SCALE);
+        font.setColor(Color.WHITE);
+        String text = "Press SPACE to climb: " + jumps + " / " + total;
+        layout.setText(font, text);
+        font.draw(batch, text, (w - layout.width) / 2f, h * 0.11f);
+        font.getData().setScale(HUD_SCALE);
+        batch.setColor(Color.WHITE);
     }
 
     private void drawMenu(float w, float h) {
@@ -472,11 +544,6 @@ public class GameScreen extends ScreenAdapter {
         drawBox(x, y, w, h, FILL_COLOR);
         font.setColor(Color.WHITE);
         font.draw(batch, text, x + OUTLINE + BORDER + PAD, y + h - OUTLINE - BORDER - PAD);
-    }
-
-    private void drawCentered(String text, float w, float h) {
-        layout.setText(font, text);
-        font.draw(batch, text, (w - layout.width) / 2, (h + layout.height) / 2);
     }
 
     // Stretched over the whole world, so there is no repeated strip at the edge
