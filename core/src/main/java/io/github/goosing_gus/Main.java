@@ -36,7 +36,7 @@ public class Main extends Game {
         generator.dispose();
 
 
-        setScreen(new ControlsScreen(this));
+        setScreen(new GameScreen(this));
 
 
     }
