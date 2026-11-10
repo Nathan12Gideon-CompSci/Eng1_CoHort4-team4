@@ -3,12 +3,12 @@ package io.github.goosing_gus;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 
-/** Hidden event: the pit is revealed when the player touches it; SPACE must be pressed 10 times to climb out. */
+/** Hidden event: the pit is revealed when the player is fully inside it; 30 SPACE presses climb the ladder out. */
 public class PitEvent extends GameObject {
 
-    private static final int JUMPS_TO_ESCAPE = 10;
+    private static final int JUMPS_TO_ESCAPE = 30;   // ladder rungs
 
-    private boolean triggered = false;   // revealed once touched (SR_EVENTHIDDEN)
+    private boolean triggered = false;   // revealed once the player has fallen in (SR_EVENTHIDDEN)
     private boolean trapped = false;
     private int jumps = 0;
 
@@ -16,16 +16,16 @@ public class PitEvent extends GameObject {
         super(x, y, w, h, pixel);
     }
 
-    /** Returns true only the first time the player touches the pit (SR_PITTRAP, SR_EVENTONCE). */
+    /** The player falls in only when completely inside the pit area. Returns true only the first time. */
     public boolean checkTrigger(Player player) {
-        if (triggered || !overlaps(player)) return false;
+        if (triggered || !rect.contains(player.rect)) return false;
         triggered = true;
         trapped = true;
         jumps = 0;
         return true;
     }
 
-    /** One SPACE press while in the pit (SR_PITESCAPE). */
+    /** One SPACE press while in the pit climbs one rung (SR_PITESCAPE). */
     public void pressJump() {
         if (!trapped) return;
         jumps++;
@@ -35,6 +35,10 @@ public class PitEvent extends GameObject {
     }
 
     public boolean isTrapped() { return trapped; }
+
+    public int getJumps() { return jumps; }
+
+    public int getTotalJumps() { return JUMPS_TO_ESCAPE; }
 
     public int getJumpsLeft() { return JUMPS_TO_ESCAPE - jumps; }
 
