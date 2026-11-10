@@ -51,4 +51,12 @@ public class Player extends GameObject {
     public void changeDirection(Vector2 direction) {
         moveDirection.set(direction);
     }
+
+    public float getPatience() {
+        return patience;
+    }
+    public float setPatience(float patience) {
+        this.patience = patience;
+        return patience;
+    }
 }

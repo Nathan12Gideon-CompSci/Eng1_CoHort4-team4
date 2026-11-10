@@ -16,6 +16,8 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class GameScreen extends ScreenAdapter {
@@ -92,6 +94,16 @@ public class GameScreen extends ScreenAdapter {
     private final LakeEvent lake = new LakeEvent(9f, 5f, 4f, 2.5f, pixelTexture);
     private int eventsTriggered = 0;
 
+    // --- items ---
+    private static final int ITEM_COUNT = 2;
+    private int itemsUsed = 0;
+
+    private Map<String, Integer> items = new HashMap<>();
+
+    private float energyDrinkStartTime = 500f;
+    private boolean energyDrinkInUse = false;
+
+    // --- player ---
     private final Player player = new Player(
         WORLD_WIDTH / 2, WORLD_HEIGHT / 2,
         gameViewport,
@@ -103,6 +115,10 @@ public class GameScreen extends ScreenAdapter {
         this.batch = game.getBatch();
 
         font.getData().setScale(HUD_SCALE);
+
+        // add items to map
+        items.put("Energy drink", 1);
+        items.put("Stress ball", 1);
     }
 
     private static Texture createPixelTexture() {
@@ -292,6 +308,7 @@ public class GameScreen extends ScreenAdapter {
     private void processInput() {
         inputMovement.setZero();
         if (!pit.isTrapped()) {                  // cannot move while stuck in the pit
+            // movement
             if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
                 inputMovement.y += 1;
             }
@@ -304,10 +321,35 @@ public class GameScreen extends ScreenAdapter {
             if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
                 inputMovement.x += 1;
             }
+
+            // items
+            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1) || Gdx.input.isKeyPressed(Input.Keys.NUMPAD_1)) {
+                useItem("Energy drink");
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2) || Gdx.input.isKeyPressed(Input.Keys.NUMPAD_2)) {
+                useItem("Stress ball");
+            }
         }
         //normalise movement
         inputMovement.nor();
         player.changeDirection(inputMovement);
+
+
+    }
+
+    private void useItem(String item) {
+        if (item.equals("Energy drink") && items.get("Energy drink") >= 1) {
+            energyDrinkInUse = true;
+            energyDrinkStartTime = timer.getRemaining();
+            items.put("Energy drink", items.get("Energy drink") - 1);
+            itemsUsed++;
+        }
+        if (item.equals("Stress ball") && items.get("Stress ball") >= 1) {
+            player.setPatience(player.getPatience() + 30);
+            items.put("Stress ball", items.get("Stress ball") - 1);
+            System.out.println(items.get("Stress ball"));
+            itemsUsed++;
+        }
     }
 
     @Override
@@ -342,6 +384,13 @@ public class GameScreen extends ScreenAdapter {
         if (isPlaying()) {
             player.update(deltaTime);     // player and geese freeze when paused
             updateEvents();
+        }
+        if(energyDrinkInUse) {
+            player.setSpeedMultiplier(2);
+            if(timer.getRemaining() < energyDrinkStartTime - 10) {
+                energyDrinkInUse = false;
+                player.setSpeedMultiplier(1);
+            }
         }
     }
 
@@ -405,6 +454,27 @@ public class GameScreen extends ScreenAdapter {
         float eventsY = iconY - 10f - boxH;
         drawLabelBox("Hidden events left: " + eventsLeft, MARGIN, eventsY,
             boxWidth("Hidden events left: 9"), boxH);
+
+        // no. of items used
+        float itemsUsedY = iconY - 70f - boxH;
+        drawLabelBox("Items used: " + itemsUsed, MARGIN, itemsUsedY,
+            boxWidth("Items used: 0"), boxH);
+
+        // item list
+        float itemListY = iconY - 260f - boxH;
+        drawLabelBox("Items:\n" +
+                "1 - Energy drink (" + items.get("Energy drink") + ")\n" +
+                "2 - Stress ball (" + items.get("Stress ball") + ")",
+            MARGIN, itemListY,
+            boxWidth("Items:\n1 - Energy drink(0)\n 2 - Stress ball(0)"),
+            boxH * (ITEM_COUNT + 1));
+
+        // patience level
+        float patienceY = iconY - 400f - boxH;
+        drawLabelBox("Patience level: " + player.getPatience(), MARGIN, patienceY,
+            boxWidth("Patience level: 100"), boxH);
+
+
 
         // menu
         if (isMenuVisible()) {
