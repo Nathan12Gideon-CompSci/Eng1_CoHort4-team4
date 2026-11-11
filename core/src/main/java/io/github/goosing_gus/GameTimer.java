@@ -8,7 +8,7 @@ public class GameTimer {
     public GameTimer(float durationSeconds) {
         this.duration = durationSeconds;
         this.remaining = durationSeconds;
-        this.running = false;          // 開局是暫停狀態
+        this.running = false;          // pasuding mode when game start
     }
 
     public void start() { running = true; }
@@ -21,7 +21,7 @@ public class GameTimer {
     public void update(float delta) {
         if (!running) return;
         remaining -= delta;
-        if (remaining <= 0) {          // 到 0 就停住，不會變負數
+        if (remaining <= 0) {          // stop until 0, unless making it negative
             remaining = 0;
             running = false;
         }
