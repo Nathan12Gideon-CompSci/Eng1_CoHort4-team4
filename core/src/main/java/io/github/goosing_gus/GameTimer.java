@@ -8,7 +8,7 @@ public class GameTimer {
     public GameTimer(float durationSeconds) {
         this.duration = durationSeconds;
         this.remaining = durationSeconds;
-        this.running = false;          // pasuding mode when game start
+        this.running = false;          // pause mode when game start
     }
 
     public void start() { running = true; }
