@@ -21,7 +21,7 @@ public class GameTimer {
     public void update(float delta) {
         if (!running) return;
         remaining -= delta;
-        if (remaining <= 0) {          // stop until 0, unless making it negative
+        if (remaining <= 0) {          // stop until 0, not making it negative
             remaining = 0;
             running = false;
         }
