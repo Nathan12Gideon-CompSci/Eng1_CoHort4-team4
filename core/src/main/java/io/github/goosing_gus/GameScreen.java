@@ -102,6 +102,7 @@ public class GameScreen extends ScreenAdapter {
 
     private float energyDrinkStartTime = 500f;
     private boolean energyDrinkInUse = false;
+    private float energyDrinkDuration = 5f;
 
     // --- player ---
     private final Player player = new Player(
@@ -385,9 +386,9 @@ public class GameScreen extends ScreenAdapter {
             player.update(deltaTime);     // player and geese freeze when paused
             updateEvents();
         }
-        if(energyDrinkInUse) {
+        if(energyDrinkInUse && !lake.overlaps(player)) {
             player.setSpeedMultiplier(2);
-            if(timer.getRemaining() < energyDrinkStartTime - 10) {
+            if(timer.getRemaining() < energyDrinkStartTime - energyDrinkDuration) {
                 energyDrinkInUse = false;
                 player.setSpeedMultiplier(1);
             }
@@ -471,7 +472,7 @@ public class GameScreen extends ScreenAdapter {
 
         // patience level
         float patienceY = iconY - 400f - boxH;
-        drawLabelBox("Patience level: " + player.getPatience(), MARGIN, patienceY,
+        drawLabelBox("Patience level: " + Math.round(player.getPatience()), MARGIN, patienceY,
             boxWidth("Patience level: 100"), boxH);
 
 
