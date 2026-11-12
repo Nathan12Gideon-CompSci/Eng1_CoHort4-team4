@@ -31,6 +31,6 @@ Useful Gradle tasks and flags:
 - `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
 - `lwjgl3:run`: starts the application.
 - `test`: runs unit tests (if any).
-- 'licences' : Portions of this software are copyright © //// The FreeType Project (www.freetype.org). All rights reserved.
+- 'licences' : Portions of this software are copyright © 2024 The FreeType Project (www.freetype.org). All rights reserved.
 Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
 For example, `core:clean` removes `build` folder only from the `core` project.
