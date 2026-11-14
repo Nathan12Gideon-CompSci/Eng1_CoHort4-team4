@@ -5,6 +5,9 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Rectangle;
 
 public abstract class GameObject {
+    /**
+     * Game object class which object such as the player and events inherit from.
+     */
 
     protected final Rectangle rect;
     protected Texture texture;

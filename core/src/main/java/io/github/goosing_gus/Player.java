@@ -6,6 +6,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class Player extends GameObject {
+    /**
+     * Handles the player.
+     */
 
     private static final float SCALE = 1 / 320f;
     private static final float PATIENCE = 100f;

@@ -21,6 +21,9 @@ import java.util.Map;
 import java.util.Random;
 
 public class GameScreen extends ScreenAdapter {
+    /**
+     * Handles the game screen, which is launched when the game starts.
+     */
     private static final float WORLD_WIDTH = 16f;
     private static final float WORLD_HEIGHT = 9f;
     private static final float ROUND_SECONDS = 300f;   // 5 minutes of play time
