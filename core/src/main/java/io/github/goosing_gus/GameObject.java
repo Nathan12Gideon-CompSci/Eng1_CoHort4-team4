@@ -4,10 +4,11 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Rectangle;
 
+/**
+ * Game object class which object such as the player and events inherit from.
+ */
 public abstract class GameObject {
-    /**
-     * Game object class which object such as the player and events inherit from.
-     */
+
 
     protected final Rectangle rect;
     protected Texture texture;

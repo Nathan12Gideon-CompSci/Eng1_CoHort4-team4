@@ -1,9 +1,10 @@
 package io.github.goosing_gus;
 
+/**
+ * Handles the logic for the timer in the corner of the screen.
+ */
 public class GameTimer {
-    /**
-     * Handles the logic for the timer in the corner of the screen.
-     */
+
     private final float duration;
     private float remaining;
     private boolean running;
