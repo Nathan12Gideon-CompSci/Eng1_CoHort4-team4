@@ -16,4 +16,5 @@ dependencies {
 
 jar {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  manifest { attributes 'Main-Class': 'io.github.goosing_gus.Main' }
 }
