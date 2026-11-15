@@ -178,6 +178,8 @@ public class GameScreen extends ScreenAdapter {
         pit.reset();
         lake.reset();
         eventsTriggered = 0;
+        itemsUsed = 0;
+        items.replaceAll((k, v) -> 1);
         paused = true;
         menuIndex = 0;
     }
